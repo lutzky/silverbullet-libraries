@@ -95,7 +95,7 @@ function projects.render_bucket(bucket_list, max_items)
       projects.list_snooze_prefix(p.snooze_until) ..
       projects.list_priority_string(p.priority) .. " " ..
       "[[" .. p.name .. "]] " ..
-      lutzky_utils.list_tagify(p.tags) ..
+      list_tagify(p.tags) ..
       "\n"
     )
     out = out .. project_entry
@@ -143,7 +143,7 @@ function projects.is_snoozed(snooze_until)
   if type(snooze_until) != "string" then
     return false
   end
-  if not lutzky_utils.is_date(snooze_until) then
+  if not is_date(snooze_until) then
     -- We'll notice that these didn't get snoozed, as they'll
     -- be in the active list.
     return false
@@ -174,8 +174,6 @@ function projects.list_snooze_prefix(snooze_until)
   return "😴" .. snooze_until .. " "
 end
 
-projects.project_template = template.new[==[${projects.list_snooze_prefix(snooze_until)}${projects.list_priority_string(priority)} [[${name}]] ${lutzky_utils.list_tagify(tags)}]==]
-
 projects.inbox_template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${projects.firstLine(name)}'
 
 function projects.firstLine(pageName)
@@ -187,6 +185,17 @@ function projects.inbox_notes()
     from index.tag "page"
     where string.startsWith(name, "Inbox/")
   ]]
+end
+
+local function list_tagify(tags)
+  if (not tags) or (#tags == 0) then
+     return ''
+  end
+  return '#' .. table.concat(tags, ' #')
+end
+
+local function is_date(s)
+  return not not string.match(s, "^....%-..%-..$")
 end
 ```
 

@@ -278,3 +278,38 @@ command.define {
   end,
 }
 ```
+
+# Inbox notes
+
+```space-lua
+inbox = inbox or {}
+
+inbox.template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${string.split(space.readPage(name),"\n")[1]}'
+inbox.template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${inbox.firstLine(name)}'
+
+function inbox.firstLine(pageName)
+  return string.split(space.readPage(pageName), "\n")[1]
+end
+
+function inbox.notes()
+  return query[[
+    from index.tag "page"
+    where string.startsWith(name, "Inbox/")
+  ]]
+end
+
+local inboxBottomTemplate = template.new[==[This is an inbox page
+]==]
+
+local function inboxBottomWidget()
+  if not string.startsWith(editor.getCurrentPage(), "Inbox/") then
+    return nil
+  end
+  return widgets.commandButton("Delete this note", "Page: Delete")
+end
+  
+event.listen {
+  name = "hooks:renderBottomWidgets",
+  run = inboxBottomWidget
+}
+```

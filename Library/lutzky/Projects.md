@@ -13,8 +13,8 @@ This gives you a "mostly read-only" homepage, while keeping this section easy to
 
 # Dashboard
 
-## Inbox notes (${#inbox.notes()})
-${some(query[[from p = inbox.notes() select inbox.template(p)]]) or "*None*"}
+## Inbox notes (${#projects.inbox_notes()})
+${some(query[[from p = projects.inbox_notes() select projects.inbox_template(p)]]) or "*None*"}
 
 ## Tasks
 These are all open tasks tagged `#next`.
@@ -175,6 +175,19 @@ function projects.list_snooze_prefix(snooze_until)
 end
 
 projects.project_template = template.new[==[${projects.list_snooze_prefix(snooze_until)}${projects.list_priority_string(priority)} [[${name}]] ${lutzky_utils.list_tagify(tags)}]==]
+
+projects.inbox_template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${projects.firstLine(name)}'
+
+function projects.firstLine(pageName)
+  return string.split(space.readPage(pageName), "\n")[1]
+end
+
+function projects.inbox_notes()
+  return query[[
+    from index.tag "page"
+    where string.startsWith(name, "Inbox/")
+  ]]
+end
 ```
 
 # Validator hook
@@ -279,28 +292,9 @@ command.define {
 }
 ```
 
-# Inbox notes
+# Show "Delete this" at bottom of inbox notes
 
 ```space-lua
-inbox = inbox or {}
-
-inbox.template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${string.split(space.readPage(name),"\n")[1]}'
-inbox.template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${inbox.firstLine(name)}'
-
-function inbox.firstLine(pageName)
-  return string.split(space.readPage(pageName), "\n")[1]
-end
-
-function inbox.notes()
-  return query[[
-    from index.tag "page"
-    where string.startsWith(name, "Inbox/")
-  ]]
-end
-
-local inboxBottomTemplate = template.new[==[This is an inbox page
-]==]
-
 local function inboxBottomWidget()
   if not string.startsWith(editor.getCurrentPage(), "Inbox/") then
     return nil
@@ -311,5 +305,64 @@ end
 event.listen {
   name = "hooks:renderBottomWidgets",
   run = inboxBottomWidget
+}
+```
+
+# Date tools
+
+These are useful for snoozing (but also other project-manage-y things).
+
+```space-lua
+dateTools = dateTools or {}
+
+local DAY_SECONDS = 60 * 60 * 24
+
+function dateTools.nDaysFromNow(n, extraSpec)
+  if extraSpec == nil then
+    extraSpec = ""
+  end
+  return os.date("%Y-%m-%d" .. extraSpec, os.time() + DAY_SECONDS * n)
+end
+
+function dateTools.selectDate()
+  local options = {}
+
+  local metaOptions = {
+    {"Today", 0},
+    {"Tomorrow", 1},
+    {"Day after tomorrow", 2},
+    {"In one week", 7},
+    {"In two weeks", 14},
+  }
+
+  for _, pair in ipairs(metaOptions) do
+    local desc = pair[1]
+    local n = pair[2]
+    table.insert(options, {
+      name = desc .. " (" .. dateTools.nDaysFromNow(n) .. ")",
+      value = dateTools.nDaysFromNow(n)
+    })
+  end
+
+  for n = 1,365 do
+    local desc = dateTools.nDaysFromNow(n, " (%A)")
+    table.insert(options, {
+      name = desc,
+      value = dateTools.nDaysFromNow(n)
+    })
+  end
+
+  local result = editor.filterBox("Pick a date", options)
+  return result
+end
+
+slashcommand.define {
+  name = "date",
+  run = function()
+    local result = dateTools.selectDate()
+    if result then
+      editor.insertAtCursor(result.value)
+    end
+  end
 }
 ```

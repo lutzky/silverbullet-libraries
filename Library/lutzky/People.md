@@ -1,3 +1,6 @@
+---
+tags: meta
+---
 # Icon for people
 
 ```space-lua

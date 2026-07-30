@@ -365,6 +365,47 @@ function dateTools.selectDate()
   return result
 end
 
+function dateTools.weeks_and_days_until(target_date_str)
+    -- Expects target_date_str formatted as "YYYY-MM-DD"
+    local year, month, day = string.match(target_date_str, "(%d+)-(%d+)-(%d+)")
+    if not year then return "Invalid Date" end
+    
+    local target_time = os.time({
+        year = tonumber(year),
+        month = tonumber(month),
+        day = tonumber(day),
+        hour = 0, min = 0, sec = 0
+    })
+    
+    local current_time = os.time()
+    local diff_seconds = target_time - current_time
+    local total_days = math.ceil(diff_seconds / 86400)
+    
+    if total_days < 0 then
+        local abs_days = math.abs(total_days)
+        local w = math.floor(abs_days / 7)
+        local d = abs_days % 7
+        return (w > 0 and (w .. "w ") or "") .. d .. "d ago"
+    elseif total_days == 0 then
+        return "Today!"
+    end
+    
+    -- Break down into weeks and days
+    local weeks = math.floor(total_days / 7)
+    local days = total_days % 7
+    
+    -- Format output with correct pluralization
+    local result = {}
+    if weeks > 0 then
+        table.insert(result, weeks .. (weeks == 1 and " week" or " weeks"))
+    end
+    if days > 0 then
+        table.insert(result, days .. (days == 1 and " day" or " days"))
+    end
+    
+    return table.concat(result, ", ") .. " remaining"
+end
+
 slashcommand.define {
   name = "date",
   run = function()

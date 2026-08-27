@@ -1,5 +1,6 @@
 ---
-tags: meta
+name: Library/lutzky/People
+tags: meta/library
 ---
 
 # Hint about retroactively doing this

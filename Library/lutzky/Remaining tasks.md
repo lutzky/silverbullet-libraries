@@ -1,12 +1,14 @@
-#meta/library
+---
+tags: meta/library
+---
 
 To disable, set front-matter `pageDecoration.disableRemainingTasks` to `true`.
 
 # Example
 
-- [ ] task1
-- [x] task2
-- [ ] task3
+* [ ] task1
+* [x] task2
+* [ ] task3
 
 # Implementation
 

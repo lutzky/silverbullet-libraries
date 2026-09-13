@@ -13,8 +13,8 @@ This gives you a "mostly read-only" homepage, while keeping this section easy to
 
 # Dashboard
 
-## Inbox notes (${#projects.inbox_notes()})
-${some(query[[from p = projects.inbox_notes() select projects.inbox_template(p)]]) or "*None*"}
+## Inbox notes (${#libprojects.inbox_notes()})
+${some(query[[from p = libprojects.inbox_notes() select libprojects.inbox_template(p)]]) or "*None*"}
 
 ## Tasks
 These are all open tasks tagged `#next`.
@@ -23,13 +23,32 @@ ${some(query[[
     select templates.taskItem(p)
   ]]) or "*None*"}
 
-${projects.render_dashboard()}
+${libprojects.render_dashboard()}
 
 # Code for main project list
 ```space-lua
-projects = projects or {}
+libprojects = libprojects or {}
 
-function projects.load_dashboard_data()
+virtualPage.define {
+  pattern = "projects:ready",
+  run = function(name)
+    return "# Ready projects\n" .. libprojects.render_ready_projects()
+  end
+}
+
+function libprojects.list_priority_string(priority)
+  if priority == nil then
+    return "🤷"
+  end
+  local priority_icon = ({
+    ["P0"]="🟥",
+    ["P1"]="🟨",
+    ["P2"]="🟩",
+  })[priority] or "🤷"
+  return priority_icon .. priority
+end
+
+function libprojects.load_dashboard_data()
   local all_projects = query[[from index.pages() 
     where string.startsWith(name, "Projects/") 
     and status != "Done" 
@@ -83,7 +102,32 @@ function projects.load_dashboard_data()
   return buckets
 end
 
-function projects.render_bucket(bucket_list, max_items)
+function libprojects.render_ready_projects()
+  local projects = query[[from index.pages() 
+    where string.startsWith(name, "Projects/") 
+    and status == "Ready" 
+    order by priority
+  ]]
+
+  if #projects == 0 then return "*None*\n" end
+  local out = ""
+
+  for i = 1, #projects do
+    local p = projects[i]
+    local project_entry = (
+      libprojects.list_priority_string(p.priority) .. " " ..
+      "[[" .. p.name .. "]] " ..
+      list_tagify(p.tags) ..
+      "\n"
+    )
+
+    out = out .. project_entry .. ""
+  end
+
+  return out .. ""
+end
+
+function libprojects.render_bucket(bucket_list, max_items)
   if #bucket_list == 0 then return "*None*\n" end
   
   local out = ""
@@ -92,8 +136,8 @@ function projects.render_bucket(bucket_list, max_items)
   for i = 1, count do
     local p = bucket_list[i]
     local project_entry = (
-      projects.list_snooze_prefix(p.snooze_until) ..
-      projects.list_priority_string(p.priority) .. " " ..
+      libprojects.list_snooze_prefix(p.snooze_until) ..
+      libprojects.list_priority_string(p.priority) .. " " ..
       "[[" .. p.name .. "]] " ..
       list_tagify(p.tags) ..
       "\n"
@@ -103,16 +147,16 @@ function projects.render_bucket(bucket_list, max_items)
   return out
 end
 
-function projects.render_dashboard()
-  local data = projects.load_dashboard_data()
+function libprojects.render_dashboard()
+  local data = libprojects.load_dashboard_data()
   
   local out = ""
   
   out = out .. string.format("## Active (%d)\n", #data.active)
-  out = out .. projects.render_bucket(data.active) .. "\n"
+  out = out .. libprojects.render_bucket(data.active) .. "\n"
 
   out = out .. string.format("## Snoozed (%d)\n", #data.snoozed)
-  out = out .. projects.render_bucket(data.snoozed, 10)
+  out = out .. libprojects.render_bucket(data.snoozed, 10)
 
   if #data.snoozed > 10 then
     out = out .. "... (see more below)"
@@ -121,25 +165,25 @@ function projects.render_dashboard()
   out = out .. "\n"
 
   out = out .. string.format("## Ready (%d)\n", #data.ready)
-  out = out .. projects.render_bucket(data.ready, 20)
+  out = out .. libprojects.render_bucket(data.ready, 20)
   if #data.ready > 20 then
-    out = out .. "\nMore: [[Ready Projects]]\n"
+    out = out .. "\nMore: [[projects:ready|Ready Projects]]\n"
   end
   out = out .. "\n"
   
   out = out .. string.format("## Blocked (%d)\n", #data.blocked)
-  out = out .. projects.render_bucket(data.blocked) .. "\n"
+  out = out .. libprojects.render_bucket(data.blocked) .. "\n"
 
   out = out .. string.format("## All snoozed (%d)\n", #data.snoozed)
-  out = out .. projects.render_bucket(data.snoozed) .. "\n"
+  out = out .. libprojects.render_bucket(data.snoozed) .. "\n"
   
   out = out .. string.format("## Snoozed reminders (%d)\n", #data.snoozed_reminders)
-  out = out .. projects.render_bucket(data.snoozed_reminders, 10) .. "\n"
+  out = out .. libprojects.render_bucket(data.snoozed_reminders, 10) .. "\n"
 
   return out
 end
 
-function projects.is_snoozed(snooze_until)
+function libprojects.is_snoozed(snooze_until)
   if type(snooze_until) != "string" then
     return false
   end
@@ -151,36 +195,24 @@ function projects.is_snoozed(snooze_until)
   return snooze_until > os.date("%Y-%m-%d")
 end
 
-function projects.is_reminder(project)
+function libprojects.is_reminder(project)
   return table.includes(project.tags, "reminder")
 end
 
-function projects.list_priority_string(priority)
-  if priority == nil then
-    return "🤷"
-  end
-  local priority_icon = ({
-    ["P0"]="🟥",
-    ["P1"]="🟨",
-    ["P2"]="🟩",
-  })[priority] or "🤷"
-  return priority_icon .. priority
-end
-
-function projects.list_snooze_prefix(snooze_until)
-  if not projects.is_snoozed(snooze_until) then
+function libprojects.list_snooze_prefix(snooze_until)
+  if not libprojects.is_snoozed(snooze_until) then
     return ""
   end
   return "😴" .. snooze_until .. " "
 end
 
-projects.inbox_template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${projects.firstLine(name)}'
+libprojects.inbox_template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${libprojects.firstLine(name)}'
 
-function projects.firstLine(pageName)
+function libprojects.firstLine(pageName)
   return string.split(space.readPage(pageName), "\n")[1]
 end
 
-function projects.inbox_notes()
+function libprojects.inbox_notes()
   return query[[
     from index.tag "page"
     where string.startsWith(name, "Inbox/")

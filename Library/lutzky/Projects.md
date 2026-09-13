@@ -3,27 +3,13 @@ name: Library/lutzky/Projects
 tags: meta/library
 ---
 
-Transclude the "Projects" section below like so:
+Add a link to [[projects:dashboard]] (a virtual page) to your homepage, nav-bar, or whatever else is convenient.
+
+If you want to include the dashboard in another page:
 
 ```
-![[^Library/lutzky/Projects#Dashboard]]
+${libprojects.render_full_dashboard}
 ```
-
-This gives you a "mostly read-only" homepage, while keeping this section easy to edit.
-
-# Dashboard
-
-## Inbox notes (${#libprojects.inbox_notes()})
-${some(query[[from p = libprojects.inbox_notes() select libprojects.inbox_template(p)]]) or "*None*"}
-
-## Tasks
-These are all open tasks tagged `#next`.
-${some(query[[
-    from p = index.tasks("next") where p.done == false
-    select templates.taskItem(p)
-  ]]) or "*None*"}
-
-${libprojects.render_dashboard()}
 
 # Code for main project list
 ```space-lua
@@ -34,6 +20,40 @@ virtualPage.define {
   run = function(name)
     return "# Ready projects\n" .. libprojects.render_ready_projects()
   end
+}
+
+function libprojects.full_dashboard(name)
+  local out = ""
+  local inbox_notes = libprojects.inbox_notes()
+  out = out ..    "## Inbox notes (" .. #inbox_notes .. ")\n"
+  if #inbox_notes == 0 then
+    out = out .. "*None*\n"
+  else
+    out = out .. template.each(inbox_notes, libprojects.inbox_template)
+  end
+  
+  out = out .. (
+    "## Tasks\n" ..
+    "These are all open tasks tagged `#next`.\n"
+  )
+
+  local tasks = query[[
+    from p = index.tasks("next") where p.done == false
+  ]]
+
+  if #tasks == 0 then
+    out = out .. "*None*\n"
+  else
+    out = out .. template.each(tasks, templates.taskItem)
+  end
+
+  out = out .. libprojects.render_dashboard()
+  return out
+end
+
+virtualPage.define {
+  pattern = "projects:dashboard",
+  run = libprojects.full_dashboard
 }
 
 function libprojects.list_priority_string(priority)
@@ -206,7 +226,7 @@ function libprojects.list_snooze_prefix(snooze_until)
   return "😴" .. snooze_until .. " "
 end
 
-libprojects.inbox_template = template.new '**[[${name}|${string.sub(name,7)}]]** - ${libprojects.firstLine(name)}'
+libprojects.inbox_template = template.new '* [[${name}|${string.sub(name,7)}]] ${libprojects.firstLine(name)}\n'
 
 function libprojects.firstLine(pageName)
   return string.split(space.readPage(pageName), "\n")[1]

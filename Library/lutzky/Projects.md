@@ -22,6 +22,14 @@ virtualPage.define {
   end
 }
 
+command.define {
+  name = "Projects: Dashboard",
+  run = function()
+    editor.navigate("projects:dashboard")
+  end,
+  key = "Ctrl-Alt-d"
+}
+
 function libprojects.full_dashboard(name)
   local out = ""
   local inbox_notes = libprojects.inbox_notes()

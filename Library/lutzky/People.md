@@ -27,7 +27,9 @@ end
 tag.define {
   name = "person",
   transform = function(o)
-    o.pageDecoration = { prefix = "🧑 " }
+    if o.tag == "page" then
+      o.pageDecoration = { icon = "user" }
+    end
     return o
   end
 }

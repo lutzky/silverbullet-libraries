@@ -15,32 +15,34 @@ To disable, set front-matter `pageDecoration.disableRemainingTasks` to `true`.
 
 ```space-lua
 local function remainingTasksWidget()
-  local tasks = query[[from index.tag "task" where
-    not done and
-    page == editor.getCurrentPage()
-    order by pos asc
+  local tasks = query[[from t = index.tasks()
+    where not t.done and
+    t.page == editor.getCurrentPage()
+    order by t.pos asc
+    select templates.taskItem(t)
   ]]
   if #tasks > 0 then
-    return widget.new {
-      markdown="# ✅ Remaining Tasks\n" .. template.each(tasks,templates.taskItem)
-    }
+    return table.concat(tasks)
   end
 end
   
--- event.listen {
---   name = "hooks:renderTopWidgets",
---   run = remainingTasksWidget
--- }
-
-event.listen {
-  name = "hooks:renderTopWidgets",
-  run = function(e)
-    local pageText = editor.getText()
-    local fm = index.extractFrontmatter(pageText)
-    if fm.frontmatter.pageDecoration and fm.frontmatter.pageDecoration.disableRemainingTasks then
-      return
-    end
-    return remainingTasksWidget()
-  end
+view.define {
+  name = "lutzky.remainingTasks",
+  title = "✅ Remaining Tasks",
+  command = "Navigate: Remaining Tasks",
+  dock = "page-top",
+  frame = "minimal",
+  content = remainingTasksWidget,
+  defaultOpen = true,
+  refreshOn = { 
+    -- 2.11
+    "editor:pageLoaded",
+    "mq:emptyQueue:indexQueue",
+    -- 2.12
+    "navigate",
+    "index",
+  },
+  refreshOnOpen = true,
+  supportedDocks = { "page-top", "bhs", "rhs", "lhs", "page-bottom" },
 }
 ```

@@ -31,7 +31,7 @@ view.define {
   title = "✅ Remaining Tasks",
   command = "Navigate: Remaining Tasks",
   dock = "page-top",
-  frame = "minimal",
+  -- frame = "minimal", -- Full frame actually nicer, contains the title
   content = remainingTasksWidget,
   defaultOpen = true,
   refreshOn = { 
